@@ -1,0 +1,39 @@
+version: "3.7"
+
+services:
+  traefik:
+    image: traefik:v2.0.2
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker
+      - --api.insecure=true
+      - --accesslog=true
+      - --accesslog.filepath=./access.log
+      - --accesslog.bufferingsize=100
+      - --accesslog.format=json
+
+    ports:
+    - "8080:8080"
+    - "80:80"
+    - "443:443"
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    # - "$PWD/traefik.toml:/etc/traefik/traefik.toml"
+
+  whoami:
+    image: containous/whoami
+    labels:
+      - "traefik.http.routers.whoami_http.rule=Host(`nginx1.primamedix.net`)"
+      - "traefik.http.routers.whoami_http.entrypoints=web"
+      - "traefik.http.routers.whoami_http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+      - "traefik.http.routers.whoami.rule=Host(`nginx1.primamedix.net`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls=true"
+   
+  nginx:
+     image: nginx:latest
+     labels:
+       - "traefik.http.routers.my-app.rule=Host(`nginx.primamedix.net`)"
